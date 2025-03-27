@@ -1,0 +1,46 @@
+{
+  "lease": [
+    {
+      "startDate": "2025-01-01T00:00:00.000Z",
+      "endDate": "2026-01-01T00:00:00.000Z",
+      "monthlyRent": 1500,
+      "securityDeposit": 3000,
+      "additionalCharges": 200,
+      "annualRentIncrease": 5,
+      "leaseType": "RESIDENTIAL",
+      "utilitiesIncluded": true,
+      "monthlyMaintenanceFee": 100,
+      "latePaymentPenalty": 50,
+      "notes": "Lease includes utilities and maintenance.",
+      "id": "bf4e"
+    },
+    {
+      "id": "769a",
+      "startDate": "2025-02-28T21:00:00.000Z",
+      "endDate": "2025-03-31T21:00:00.000Z",
+      "monthlyRent": 10000,
+      "securityDeposit": 10000,
+      "additionalCharges": 10,
+      "annualRentIncrease": 10,
+      "leaseType": "RESIDENTIAL",
+      "utilitiesIncluded": true,
+      "monthlyMaintenanceFee": 10,
+      "latePaymentPenalty": 10,
+      "notes": "."
+    },
+    {
+      "id": "04ea",
+      "startDate": null,
+      "endDate": null,
+      "monthlyRent": 0,
+      "securityDeposit": 0,
+      "additionalCharges": 0,
+      "annualRentIncrease": 0,
+      "leaseType": "RESIDENTIAL",
+      "utilitiesIncluded": false,
+      "monthlyMaintenanceFee": 0,
+      "latePaymentPenalty": 0,
+      "notes": ""
+    }
+  ]
+}

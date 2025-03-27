@@ -1,0 +1,61 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  leases       Lease[]
+  sharedLeases SharedLease[]
+}
+
+model Lease {
+  id                      String        @id @default(uuid())
+  userId                  Int
+  user                    User          @relation(fields: [userId], references: [id])
+  startDate               DateTime
+  endDate                 DateTime
+  monthlyRent             Float
+  securityDeposit         Float
+  additionalCharges       Float?
+  annualRentIncrease      Float         @default(0)
+  leaseType               LeaseType     @default(RESIDENTIAL)
+  utilitiesIncluded       Boolean       @default(false)
+  monthlyMaintenanceFee   Float         @default(0)
+  latePaymentPenalty      Float         @default(0)
+  notes                   String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  sharedLeases            SharedLease[]
+    shareToken              String?       @unique 
+
+
+  @@index([userId])
+}
+
+model SharedLease {
+  id        String   @id @default(uuid())
+  leaseId   String
+  lease     Lease    @relation(fields: [leaseId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([leaseId, userId])
+  @@index([userId])
+}
+
+enum LeaseType {
+  RESIDENTIAL
+  COMMERCIAL
+}
