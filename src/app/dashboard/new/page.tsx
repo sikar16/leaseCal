@@ -12,8 +12,9 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
 export default function LeaseCalculator() {
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+
+    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
     const [monthlyRent, setMonthlyRent] = useState(0);
     const [securityDeposit, setSecurityDeposit] = useState(0);
     const [additionalCharges, setAdditionalCharges] = useState(0);
@@ -42,7 +43,7 @@ export default function LeaseCalculator() {
     const totalMaintenance = monthlyMaintenanceFee * totalMonths;
     const totalCost = totalRent + securityDeposit + additionalCharges + totalMaintenance;
     const route = useRouter()
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         await axios.post('http://localhost:5000/lease', {
             startDate: startDate,
@@ -56,10 +57,10 @@ export default function LeaseCalculator() {
             monthlyMaintenanceFee: monthlyMaintenanceFee,
             latePaymentPenalty: latePaymentPenalty,
             notes: notes
+        });
+        route.push('/dashboard');
+    };
 
-        })
-        route.push('/dashboard')
-    }
 
 
     return (

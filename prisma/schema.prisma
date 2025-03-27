@@ -43,17 +43,22 @@ model Lease {
   @@index([userId])
 }
 
-model SharedLease {
-  id        String   @id @default(uuid())
-  leaseId   String
-  lease     Lease    @relation(fields: [leaseId], references: [id])
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
 
-  @@unique([leaseId, userId])
-  @@index([userId])
+
+model SharedLease {
+  id         String  @id @default(uuid())
+  leaseId    String
+  userId     Int
+  shareToken String  @unique
+  createdAt  DateTime @default(now())
+
+  lease Lease @relation(fields: [leaseId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([leaseId, userId]) // ✅ Composite unique constraint
 }
+
+
 
 enum LeaseType {
   RESIDENTIAL

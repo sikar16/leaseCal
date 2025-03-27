@@ -1,29 +1,31 @@
-import { Request, Response, Router } from 'express';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 
-const router = Router();
 const prisma = new PrismaClient();
 
 // Zod schema for token validation
 const tokenSchema = z.string().uuid();
 
-router.get('/dashboard/share/:token', async (req: Request, res: Response) => {
+export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
     try {
+        const { token } = params;
+
         // Validate the token format
-        const validation = tokenSchema.safeParse(req.params.token);
+        const validation = tokenSchema.safeParse(token);
         if (!validation.success) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid share token format',
-                details: validation.error.errors
-            });
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'Invalid share token format',
+                    details: validation.error.errors
+                },
+                { status: 400 }
+            );
         }
 
-        const { token } = req.params;
-
         const sharedLease = await prisma.sharedLease.findUnique({
-            where: { shareToken: token },
+            where: { shareToken: token }, // Now `shareToken` exists in SharedLease
             include: {
                 lease: {
                     include: {
@@ -38,21 +40,28 @@ router.get('/dashboard/share/:token', async (req: Request, res: Response) => {
                 }
             }
         });
+        
 
         if (!sharedLease) {
-            return res.status(404).json({
-                success: false,
-                error: 'Shared lease not found or token expired'
-            });
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'Shared lease not found or token expired'
+                },
+                { status: 404 }
+            );
         }
 
         // Check if lease is active
         if (new Date(sharedLease.lease.endDate) < new Date()) {
-            return res.status(410).json({
-                success: false,
-                error: 'This lease has expired',
-                endedAt: sharedLease.lease.endDate
-            });
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'This lease has expired',
+                    endedAt: sharedLease.lease.endDate
+                },
+                { status: 410 }
+            );
         }
 
         // Format response data
@@ -74,21 +83,18 @@ router.get('/dashboard/share/:token', async (req: Request, res: Response) => {
             shareToken: sharedLease.shareToken
         };
 
-        res.json({
-            success: true,
-            data: responseData
-        });
-
+        return NextResponse.json({ success: true, data: responseData });
     } catch (error) {
         console.error('Error fetching shared lease:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            message: error instanceof Error ? error.message : 'Unknown error'
-        });
+        return NextResponse.json(
+            {
+                success: false,
+                error: 'Internal server error',
+                message: error instanceof Error ? error.message : 'Unknown error'
+            },
+            { status: 500 }
+        );
     } finally {
         await prisma.$disconnect();
     }
-});
-
-export default router;
+}

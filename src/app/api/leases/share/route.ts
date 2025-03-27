@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import * as z from "zod";
+import { v4 as uuidv4 } from "uuid"; // Import UUID generator
 
 const shareLeaseSchema = z.object({
   leaseId: z.string(),
@@ -48,15 +49,13 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    // Check if lease is already shared with this user
-    const existingShare = await db.sharedLease.findUnique({
+    const existingShare = await db.sharedLease.findFirst({
       where: {
-        leaseId_userId: {
-          leaseId,
-          userId
-        }
+        leaseId,
+        userId
       }
     });
+    
 
     if (existingShare) {
       return NextResponse.json({
@@ -69,8 +68,9 @@ export async function POST(req: Request) {
     const sharedLease = await db.sharedLease.create({
       data: {
         leaseId,
-        userId
-      }
+        userId,
+        shareToken: uuidv4(), 
+        }
     });
 
     return NextResponse.json({

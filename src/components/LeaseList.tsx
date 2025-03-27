@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Lease } from "@prisma/client";
 import { toast } from "react-hot-toast";
@@ -34,7 +34,7 @@ export default function LeaseList({ refreshTrigger, userName }: { refreshTrigger
     });
     const [viewMode, setViewMode] = useState<"cards" | "table">("table");
 
-    const fetchLeases = async () => {
+    const fetchLeases = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
@@ -77,7 +77,11 @@ export default function LeaseList({ refreshTrigger, userName }: { refreshTrigger
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        fetchLeases();
+    }, [fetchLeases, refreshTrigger]);
 
     const calculateTotalLeaseCost = (lease: LeaseWithDetails) => {
         const startDate = new Date(lease.startDate);
@@ -191,8 +195,10 @@ export default function LeaseList({ refreshTrigger, userName }: { refreshTrigger
 
     useEffect(() => { fetchLeases(); }, [refreshTrigger]);
 
-    const formatDate = (dateString: string) =>
-        new Date(dateString).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    const formatDate = (dateInput: string | Date) => {
+        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("en-ET", {
