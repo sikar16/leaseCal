@@ -21,7 +21,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Features Grid */}
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
             <div className="text-amber-600 mb-4">
