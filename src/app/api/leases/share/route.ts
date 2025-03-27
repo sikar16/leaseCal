@@ -1,97 +1,87 @@
 import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions ";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/session";
-import * as z from "zod";
-import { v4 as uuidv4 } from "uuid"; // Import UUID generator
+import { v4 as uuidv4 } from "uuid";
 
-const shareLeaseSchema = z.object({
-  leaseId: z.string(),
-  userId: z.number().positive()
-});
-
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({
-        success: false,
-        message: "Unauthorized"
-      }, { status: 401 });
+    // Validate session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json();
-    const { leaseId, userId } = shareLeaseSchema.parse(body);
+    // Verify user exists
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true } // Only select needed fields
+    });
 
-    // Verify current user owns the lease
-    const lease = await db.lease.findFirst({
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Validate lease ownership
+    const lease = await db.lease.findUnique({
       where: {
-        id: leaseId,
-        userId: currentUser.id
+        id: params.id,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+        shareToken: true
       }
     });
 
     if (!lease) {
-      return NextResponse.json({
-        success: false,
-        message: "Lease not found or you don't have permission to share it"
-      }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lease not found or access denied" },
+        { status: 404 }
+      );
     }
 
-    // Verify target user exists
-    const targetUser = await db.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!targetUser) {
-      return NextResponse.json({
-        success: false,
-        message: "User not found"
-      }, { status: 404 });
-    }
-
-    const existingShare = await db.sharedLease.findFirst({
-      where: {
-        leaseId,
-        userId
+    // Generate or reuse token in a single transaction
+    const updatedLease = await db.lease.update({
+      where: { id: params.id },
+      data: {
+        shareToken: lease.shareToken || uuidv4()
+      },
+      select: {
+        shareToken: true
       }
     });
-    
 
-    if (existingShare) {
-      return NextResponse.json({
-        success: false,
-        message: "Lease is already shared with this user"
-      }, { status: 409 });
+    if (!updatedLease.shareToken) {
+      throw new Error("Failed to generate share token");
     }
 
-    // Create the share
-    const sharedLease = await db.sharedLease.create({
-      data: {
-        leaseId,
-        userId,
-        shareToken: uuidv4(), 
-        }
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: sharedLease,
-      message: "Lease successfully shared"
-    }, { status: 201 });
+    return NextResponse.json(
+      { 
+        token: updatedLease.shareToken,
+        shareUrl: `${process.env.NEXTAUTH_URL}/dashboard/share/${updatedLease.shareToken}`
+      },
+      { status: 200 }
+    );
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        message: "Validation error",
-        errors: error.errors
-      }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: false,
-      message: "Something went wrong",
-      error: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    console.error("[SHARE_TOKEN_ERROR]", error);
+    
+    return NextResponse.json(
+      { 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
   }
 }
